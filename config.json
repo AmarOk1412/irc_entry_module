@@ -1,0 +1,19 @@
+{
+  "owners": [],
+  "nickname": "RORI",
+  "alt_nicks": ["RORI_", "RORI`"],
+  "username": "RORI",
+  "realname": "RORI",
+  "server": "irc.opportunis.me",
+  "port": 6697,
+  "password": "",
+  "use_ssl": true,
+  "encoding": "UTF-8",
+  "channels": ["#RORI"],
+  "channel_keys": { },
+  "umodes": "+RB-x",
+  "user_info": "In development",
+  "ping_time": 180,
+  "ping_timeout": 10,
+  "options": { }
+}
