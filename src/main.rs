@@ -1,101 +1,14 @@
 extern crate irc;
 extern crate rustc_serialize;
-// TODO get messages from Rori
-// TODO sslstream
+
+mod rori_utils;
 
 use irc::client::prelude::*;
 use std::path::Path;
-use std::io::prelude::*;
-use std::io::{Error, ErrorKind};
-
-use std::net::TcpStream;
-use std::fs::File;
-use rustc_serialize::json::decode;
-
-pub struct RoriTextData {
-    author: String,
-    content: String,
-    client: String,
-}
-
-impl RoriTextData {
-    pub fn new(author: String, content: String, client: String) -> RoriTextData {
-        RoriTextData {
-            author: author.replace("\"", "\\\""),
-            content: content.replace("\"", "\\\""),
-            client: client.replace("\"", "\\\""),
-        }
-    }
-
-    pub fn to_string(&self) -> String {
-        format!("{{
-            \"author\":\"{}\",
-            \"content\":\"{}\",
-            \"client\":\"{}\",
-        }}",
-                self.author,
-                self.content,
-                self.client)
-    }
-}
+use rori_utils::client::RoriClient;
 
 
-pub struct RoriClient {
-    stream: Option<TcpStream>,
-}
-
-
-#[derive(Clone, RustcDecodable, RustcEncodable, Default, PartialEq, Debug)]
-pub struct ConfigServer {
-    pub ip: Option<String>,
-    pub port: Option<String>,
-}
-
-impl RoriClient {
-    pub fn parse_config(data: String) -> String {
-        let params: ConfigServer = decode(&data[..])
-            .map_err(|_| {
-                Error::new(ErrorKind::InvalidInput,
-                           "Failed to decode configuration file.")
-            })
-            .unwrap();
-
-        format!("{}:{}",
-                &params.ip.unwrap_or(String::from("")),
-                &params.port.unwrap_or(String::from("")))
-    }
-
-    pub fn new<P: AsRef<Path>>(config: P) -> RoriClient {
-        // TODO configure from file
-        let mut file = File::open(config)
-            .ok()
-            .expect("Config file not found");
-        let mut data = String::new();
-        file.read_to_string(&mut data)
-            .ok()
-            .expect("failed to read!");
-        let address = RoriClient::parse_config(data);
-        if address == ":" {
-            println!("Empty config for the connection to the server");
-        }
-        let stream = Some(TcpStream::connect(&*address).unwrap());
-        RoriClient { stream: stream }
-    }
-
-    pub fn send_to_rori(&mut self, author: &str, content: &str) {
-        // TODO data_to_send in json
-        let data_to_send = RoriTextData::new(String::from(author),
-                                             String::from(content),
-                                             String::from("irc_entry_module"));
-        if let Some(ref mut stream) = self.stream {
-            let _ = stream.write(data_to_send.to_string().as_bytes());
-        } else {
-            println!("Stream not initialized...");
-        }
-    }
-}
-
-// TODO move to file
+// TODO get messages from Rori
 pub struct RoriIrcEntry {
     server: IrcServer,
 }
@@ -116,7 +29,7 @@ impl RoriIrcEntry {
     }
 
     // Send private message, ping, etc.
-    // TODO improve
+    // TODO remove repeat
     pub fn msg_handle(&self, msg: &Message, client: &mut RoriClient) {
         let author = msg.source_nickname().unwrap_or("");
         let msg = msg.to_string();
