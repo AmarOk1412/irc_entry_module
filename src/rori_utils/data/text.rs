@@ -1,3 +1,5 @@
+use regex::Regex;
+
 pub struct RoriTextData {
     author: String,
     content: String,
@@ -23,5 +25,12 @@ impl RoriTextData {
                 self.author,
                 self.content,
                 self.client)
+    }
+
+    #[allow(dead_code)]
+    #[allow(unused_variables)]
+    fn answer_condition(&self, cond: &String) -> bool {
+        let re = Regex::new(cond).unwrap();
+        re.is_match(&*self.content)
     }
 }

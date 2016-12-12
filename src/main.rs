@@ -1,5 +1,6 @@
 extern crate irc;
 extern crate rustc_serialize;
+extern crate regex;
 
 mod rori_utils;
 
