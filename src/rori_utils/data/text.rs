@@ -18,6 +18,7 @@ impl RoriTextData {
             \"author\":\"{}\",
             \"content\":\"{}\",
             \"client\":\"{}\",
+            \"type\":\"text\"
         }}",
                 self.author,
                 self.content,
