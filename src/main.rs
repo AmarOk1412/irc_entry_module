@@ -76,7 +76,7 @@ impl RoriIrcEntry {
             }
             content = content.trim();
             // Send to RORI
-            client.send_to_rori(&author, &content);
+            client.send_to_rori(&author, &content, "irc_entry_module", "text");
             println!("FROM: {} CONTENT: {}", &author, &content);
         }
     }
