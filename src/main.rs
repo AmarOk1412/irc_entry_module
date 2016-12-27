@@ -1,6 +1,9 @@
 extern crate irc;
 extern crate rustc_serialize;
 extern crate regex;
+#[macro_use]
+extern crate log;
+extern crate env_logger;
 
 mod rori_utils;
 
@@ -46,6 +49,7 @@ struct RoriIrcEntry {
 
 impl RoriIrcEntry {
     fn new<P: AsRef<Path>>(config: P) -> RoriIrcEntry {
+        info!(target: "RoriIrcEntry", "init");
         // Connect to IRC from config file
         let server = IrcServer::new(&config).unwrap();
         server.identify().unwrap();
@@ -54,6 +58,7 @@ impl RoriIrcEntry {
 
     // For each message received by the bot. Make actions.
     fn process_msg(&self, client: &mut RoriClient, incoming: &Arc<Mutex<Vec<String>>>) {
+        info!(target: "RoriIrcEntry", "process_msg");
         for message in self.server.iter() {
             // TODO non blocking self.server.iter()
             if incoming.lock().unwrap().len() != 0 {
@@ -80,13 +85,14 @@ impl RoriIrcEntry {
             content = content.trim();
             // Send to RORI
             client.send_to_rori(&author, &content, "irc_entry_module", "text");
-            println!("FROM: {} CONTENT: {}", &author, &content);
+            info!(target:"RoriIrcEntry", "received message from {}: {}", &author, &content);
         }
     }
 
     fn write(&self, content: Option<String>) {
         match content {
             Some(s) => {
+                info!(target:"RoriIrcEntry", "write: {}", &s);
                 self.server
                     .send_privmsg("#RORI", &s)
                     .unwrap();
@@ -106,6 +112,7 @@ struct RoriServer {
 pub struct Endpoint {
     address: String,
     rori_address: String,
+    is_registered: bool,
 }
 
 impl Endpoint {
@@ -135,11 +142,12 @@ impl Endpoint {
         let address = Endpoint::parse_config_server(data.clone());
         let rori_address = Endpoint::parse_config_rori(data);
         if address == ":" || rori_address == ":" {
-            println!("Empty config for the connection to the server");
+            error!(target:"endpoint", "Empty config for the connection to the server");
         }
         Endpoint {
             address: address,
             rori_address: rori_address,
+            is_registered: false,
         }
     }
 
@@ -150,24 +158,24 @@ impl Endpoint {
                 Ok(stream) => {
                     let mut client = Client::new(stream.try_clone().unwrap());
                     let content = client.read();
-                    println!("RECEIVED:{}", &content);
+                    info!(target:"endpoint", "Received:{}", &content);
                     let end = content.find(0u8 as char);
                     let (content, _) = content.split_at(end.unwrap_or(content.len()));
                     let data_to_process = RoriData::from_json(String::from(content));
                     if data_to_process.datatype == "text" {
-                        println!("Push {}", &data_to_process.content);
                         vec.lock().unwrap().push(data_to_process.content);
                     }
                 }
                 Err(e) => {
-                    println!("Connection failed because {}", e);
+                    error!(target:"endpoint", "{}", e);
                 }
             };
         }
         drop(listener);
     }
 
-    pub fn register(&self) {
+    pub fn register(&mut self) {
+        info!(target:"endpoint", "try to register endpoint");
         // TODO security and if correctly registered
         let rori_address = self.rori_address.clone();
         let address = self.address.clone();
@@ -175,19 +183,26 @@ impl Endpoint {
         let mut content = String::from(address);
         content.push_str("|");
         content.push_str("text");
-        client.send_to_rori("AmarOk", &*content, "irc_entry_module", "register")
+        self.is_registered =
+            client.send_to_rori("AmarOk", &*content, "irc_entry_module", "register");
     }
 }
 
 // Launch RoriIrcEntry
 fn main() {
+    env_logger::init().unwrap();
+
     // will contains messages from RORI
     let vec = Arc::new(Mutex::new(Vec::new()));
     let vec_cloned = vec.clone();
     let child = thread::spawn(move || {
-        let endpoint = Endpoint::new("config_endpoint.json");
+        let mut endpoint = Endpoint::new("config_endpoint.json");
         endpoint.register();
-        endpoint.start(vec);
+        if endpoint.is_registered {
+            endpoint.start(vec);
+        } else {
+            error!(target: "endpoint", "endpoint is not registered");
+        }
     });
 
     let rori = RoriIrcEntry::new("config_bot.json");

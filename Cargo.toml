@@ -7,3 +7,5 @@ authors = ["AmarOk <amarok@enconn.fr>"]
 irc = "0.11.0"
 rustc-serialize = "0.3"
 regex = "0.1"
+log = "*"
+env_logger = "*"
