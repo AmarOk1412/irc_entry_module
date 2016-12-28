@@ -6,10 +6,11 @@ extern crate rustc_serialize;
 extern crate regex;
 
 mod rori_utils;
+mod endpoint;
 
+use endpoint::Endpoint;
 use irc::client::prelude::*;
 use rori_utils::client::RoriClient;
-use rori_utils::endpoint::Endpoint;
 use rustc_serialize::json::decode;
 use std::fs::File;
 use std::io::prelude::*;
