@@ -4,8 +4,8 @@ version = "0.0.0"
 authors = ["AmarOk <amarok@enconn.fr>"]
 
 [dependencies]
-irc = "0.11.0"
-rustc-serialize = "0.3"
-regex = "0.1"
+irc = "*"
+rustc-serialize = "*"
+regex = "*"
 log = "*"
 env_logger = "*"

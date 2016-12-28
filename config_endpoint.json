@@ -3,5 +3,8 @@
  "port":"1415",
  "can_process":"text",
  "rori_ip":"127.0.0.1",
- "rori_port":"1412"
+ "rori_port":"1412",
+ "owner":"AmarOk",
+ "name":"irc_entry_module",
+ "compatible_types":"text"
 }
