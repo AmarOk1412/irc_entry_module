@@ -4,7 +4,7 @@
  "can_process":"text",
  "rori_ip":"127.0.0.1",
  "rori_port":"1412",
- "owner":"AmarOk",
+ "owner":"*",
  "name":"irc_entry_module",
  "compatible_types":"text"
 }
