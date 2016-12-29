@@ -1,10 +1,11 @@
 {
  "ip":"127.0.0.1",
  "port":"1415",
- "can_process":"text",
  "rori_ip":"127.0.0.1",
  "rori_port":"1412",
  "owner":"*",
  "name":"irc_entry_module",
- "compatible_types":"text"
+ "compatible_types":"text",
+ "cert":"key/cert.pem",
+ "key":"key/key.pem"
 }

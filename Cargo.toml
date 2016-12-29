@@ -4,8 +4,9 @@ version = "0.0.0"
 authors = ["AmarOk <amarok@enconn.fr>"]
 
 [dependencies]
-irc = "*"
+irc = { git = "https://github.com/aatxe/irc"}
 rustc-serialize = "*"
 regex = "*"
 log = "*"
 env_logger = "*"
+openssl = "0.7"
