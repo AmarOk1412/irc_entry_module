@@ -1,3 +1,5 @@
+use crypto::digest::Digest;
+use crypto::sha2::Sha256;
 use openssl::ssl::{SslContext, SslMethod, SslStream, SSL_VERIFY_NONE};
 use openssl::x509::X509FileType::PEM;
 use rori_utils::data::RoriData;
@@ -36,12 +38,21 @@ impl Client {
     }
 }
 
+
+#[derive(Clone, RustcDecodable, RustcEncodable, Default, PartialEq, Debug)]
+struct AuthorizedUser {
+    pub name: Option<String>,
+    pub secret: Option<String>,
+}
+
 #[derive(Clone, RustcDecodable, RustcEncodable, Default, PartialEq, Debug)]
 struct RoriServer {
     pub rori_ip: Option<String>,
     pub rori_port: Option<String>,
     pub cert: Option<String>,
     pub key: Option<String>,
+    pub secret: Option<String>,
+    pub authorize: Vec<AuthorizedUser>,
 }
 
 #[derive(Clone, RustcDecodable, RustcEncodable, Default, PartialEq, Debug)]
@@ -61,6 +72,8 @@ pub struct Endpoint {
     compatible_types: String,
     cert: String,
     key: String,
+    secret: String,
+    authorize: Vec<AuthorizedUser>,
 }
 
 #[allow(dead_code)]
@@ -99,6 +112,8 @@ impl Endpoint {
             compatible_types: details.compatible_types.unwrap_or(String::from("")),
             cert: params.cert.unwrap_or(String::from("")),
             key: params.key.unwrap_or(String::from("")),
+            secret: params.secret.unwrap_or(String::from("")),
+            authorize: params.authorize,
         }
     }
 
@@ -131,8 +146,14 @@ impl Endpoint {
                         let end = content.find(0u8 as char);
                         let (content, _) = content.split_at(end.unwrap_or(content.len()));
                         let data_to_process = RoriData::from_json(String::from(content));
-                        if data_to_process.datatype == "text" {
-                            vec.lock().unwrap().push(data_to_process.content);
+                        let data_authorized = Endpoint::is_authorized(self.authorize.clone(),
+                                                                      data_to_process.clone());
+                        if data_authorized {
+                            if data_to_process.datatype == "text" {
+                                vec.lock().unwrap().push(data_to_process.content);
+                            }
+                        } else {
+                            error!(target:"Server", "Stream not authorized! Don't process.");
                         }
                     } else {
                         error!(target:"Server", "Can't create SslStream");
@@ -146,6 +167,20 @@ impl Endpoint {
         drop(listener);
     }
 
+    fn is_authorized(authorize: Vec<AuthorizedUser>, data: RoriData) -> bool {
+        let mut hasher = Sha256::new();
+        hasher.input_str(&*data.secret);
+        let secret = hasher.result_str();
+        for client in authorize {
+            let data_secret = &*data.secret;
+            if client.name.unwrap().to_lowercase() == data.client.to_lowercase() &&
+               secret.to_lowercase() == client.secret.unwrap().to_lowercase() {
+                return true;
+            }
+        }
+        false
+    }
+
     pub fn register(&mut self) {
         info!(target:"endpoint", "try to register endpoint");
         // TODO security and if correctly registered
@@ -155,6 +190,7 @@ impl Endpoint {
         let mut content = String::from(address);
         content.push_str("|");
         content.push_str(&*self.compatible_types);
-        self.is_registered = client.send_to_rori(&self.owner, &*content, &self.name, "register");
+        self.is_registered =
+            client.send_to_rori(&self.owner, &*content, &self.name, "register", &self.secret);
     }
 }

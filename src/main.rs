@@ -1,3 +1,4 @@
+extern crate crypto;
 extern crate env_logger;
 extern crate irc;
 #[macro_use]
@@ -30,10 +31,11 @@ struct Channels {
 struct RoriIrcEntry {
     server: IrcServer,
     channels: Channels,
+    secret: String,
 }
 
 impl RoriIrcEntry {
-    fn new<P: AsRef<Path>>(config: P) -> RoriIrcEntry {
+    fn new<P: AsRef<Path>>(config: P, secret: String) -> RoriIrcEntry {
         info!(target: "RoriIrcEntry", "init");
         // Connect to IRC from config file
         let server = IrcServer::new(&config).unwrap();
@@ -50,6 +52,7 @@ impl RoriIrcEntry {
         RoriIrcEntry {
             server: server,
             channels: channels,
+            secret: secret,
         }
     }
 
@@ -102,10 +105,16 @@ impl RoriIrcEntry {
             }
             content = content.trim();
             // Send to RORI
-            client.send_to_rori(&author, &content, "irc_entry_module", "text");
+            client.send_to_rori(&author, &content, "irc_entry_module", "text", &self.secret);
             info!(target:"RoriIrcEntry", "received message from {}: {}", &author, &content);
         }
     }
+}
+
+
+#[derive(Clone, RustcDecodable, RustcEncodable, Default, PartialEq, Debug)]
+pub struct Secret {
+    pub secret: Option<String>,
 }
 
 fn main() {
@@ -125,8 +134,17 @@ fn main() {
         }
     });
 
-    let rori = RoriIrcEntry::new("config_bot.json");
+    let mut file = File::open("config_endpoint.json")
+        .ok()
+        .expect("Config file not found");
+    let mut data = String::new();
+    file.read_to_string(&mut data)
+        .ok()
+        .expect("failed to read!");
+    let secret: Secret = decode(&data[..]).unwrap();
+
     let mut client = RoriClient::new("config_server.json");
+    let rori = RoriIrcEntry::new("config_bot.json", secret.secret.unwrap_or(String::from("")));
     rori.process_msg(&mut client, incoming_cloned);
     let _ = child_endpoint.join();
 }
