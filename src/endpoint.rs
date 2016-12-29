@@ -12,6 +12,8 @@ use std::str::from_utf8;
 use std::io::prelude::*;
 use std::fs::File;
 
+// TODO move in utils
+
 #[allow(dead_code)]
 struct Client {
     stream: SslStream<TcpStream>,
@@ -172,7 +174,6 @@ impl Endpoint {
         hasher.input_str(&*data.secret);
         let secret = hasher.result_str();
         for client in authorize {
-            let data_secret = &*data.secret;
             if client.name.unwrap().to_lowercase() == data.client.to_lowercase() &&
                secret.to_lowercase() == client.secret.unwrap().to_lowercase() {
                 return true;
