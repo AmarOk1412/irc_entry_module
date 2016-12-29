@@ -117,16 +117,25 @@ impl Endpoint {
         for stream in listener.incoming() {
             match stream {
                 Ok(stream) => {
-                    let ssl_stream = SslStream::accept(&ssl_context, stream.try_clone().unwrap())
-                        .unwrap();
-                    let mut client = Client::new(ssl_stream.try_clone().unwrap());
-                    let content = client.read();
-                    info!(target:"endpoint", "Received:{}", &content);
-                    let end = content.find(0u8 as char);
-                    let (content, _) = content.split_at(end.unwrap_or(content.len()));
-                    let data_to_process = RoriData::from_json(String::from(content));
-                    if data_to_process.datatype == "text" {
-                        vec.lock().unwrap().push(data_to_process.content);
+
+                    let ssl_stream = SslStream::accept(&ssl_context, stream.try_clone().unwrap());
+                    let ssl_ok = match ssl_stream {
+                        Ok(_) => true,
+                        Err(_) => false,
+                    };
+                    if ssl_ok {
+                        let ssl_stream = ssl_stream.unwrap();
+                        let mut client = Client::new(ssl_stream.try_clone().unwrap());
+                        let content = client.read();
+                        info!(target:"endpoint", "Received:{}", &content);
+                        let end = content.find(0u8 as char);
+                        let (content, _) = content.split_at(end.unwrap_or(content.len()));
+                        let data_to_process = RoriData::from_json(String::from(content));
+                        if data_to_process.datatype == "text" {
+                            vec.lock().unwrap().push(data_to_process.content);
+                        }
+                    } else {
+                        error!(target:"Server", "Can't create SslStream");
                     }
                 }
                 Err(e) => {
