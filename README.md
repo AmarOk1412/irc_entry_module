@@ -2,6 +2,8 @@
 
 # irc_entry_module
 
+![](https://travis-ci.org/AmarOk1412/irc_entry_module.svg?branch=master)
+
 IRC Entry Module is an entry and an endpoint for _[RORI](https://github.com/AmarOk1412/rori/)_. This application run an IRC bot based on this [library](https://github.com/aatxe/irc) to interact with _RORI_.
 
 # Installation
