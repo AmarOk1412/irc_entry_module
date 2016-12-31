@@ -10,9 +10,10 @@ extern crate regex;
 mod rori_utils;
 mod endpoint;
 
-use endpoint::Endpoint;
+use endpoint::IRCEndpoint;
 use irc::client::prelude::*;
 use rori_utils::client::RoriClient;
+use rori_utils::endpoint::Endpoint;
 use rustc_serialize::json::decode;
 use std::fs::File;
 use std::io::prelude::*;
@@ -128,10 +129,10 @@ fn main() {
     let incoming = Arc::new(Mutex::new(Vec::new()));
     let incoming_cloned = incoming.clone();
     let child_endpoint = thread::spawn(move || {
-        let mut endpoint = Endpoint::new("config_endpoint.json");
+        let mut endpoint = IRCEndpoint::new("config_endpoint.json", incoming);
         endpoint.register();
-        if endpoint.is_registered {
-            endpoint.start(incoming);
+        if endpoint.is_registered() {
+            endpoint.start();
         } else {
             error!(target: "endpoint", "endpoint is not registered");
         }
