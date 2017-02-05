@@ -6,18 +6,21 @@ use std::path::Path;
 use std::net::TcpListener;
 use std::sync::{Arc, Mutex};
 
-
 pub struct IRCEndpoint {
     endpoint: RoriEndpoint,
     incoming_data: Arc<Mutex<Vec<String>>>,
 }
 
 #[allow(dead_code)]
+/**
+ * Handle data from RORI and store it
+ */
 impl Endpoint for IRCEndpoint {
     fn start(&self) {
         let vec = self.incoming_data.clone();
         let listener = TcpListener::bind(&*self.endpoint.address).unwrap();
         let mut ssl_context = SslContext::new(SslMethod::Tlsv1).unwrap();
+        // Enable TLS
         match ssl_context.set_certificate_file(&*self.endpoint.cert.clone(), PEM) {
             Ok(_) => info!(target:"Server", "Certificate set"),
             Err(_) => error!(target:"Server", "Can't set certificate file"),
@@ -27,10 +30,10 @@ impl Endpoint for IRCEndpoint {
             Ok(_) => info!(target:"Server", "Private key set"),
             Err(_) => error!(target:"Server", "Can't set private key"),
         };
+
         for stream in listener.incoming() {
             match stream {
                 Ok(stream) => {
-
                     let ssl_stream = SslStream::accept(&ssl_context, stream.try_clone().unwrap());
                     let ssl_ok = match ssl_stream {
                         Ok(_) => true,
@@ -43,6 +46,7 @@ impl Endpoint for IRCEndpoint {
                         info!(target:"endpoint", "Received:{}", &content);
                         let end = content.find(0u8 as char);
                         let (content, _) = content.split_at(end.unwrap_or(content.len()));
+                        // Get data from RORI
                         let data_to_process = RoriData::from_json(String::from(content));
                         let data_authorized = self.is_authorized(data_to_process.clone());
                         if data_authorized {
