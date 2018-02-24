@@ -1,5 +1,4 @@
-use openssl::ssl::{SslContext, SslMethod, SslStream, SSL_VERIFY_NONE};
-use openssl::x509::X509FileType::PEM;
+use openssl::ssl::{Ssl, SslContext, SslMethod, SslFiletype, SslVerifyMode};
 use rori_utils::data::RoriData;
 use rori_utils::endpoint::{Endpoint, Client, RoriEndpoint};
 use std::path::Path;
@@ -19,29 +18,30 @@ impl Endpoint for IRCEndpoint {
     fn start(&self) {
         let vec = self.incoming_data.clone();
         let listener = TcpListener::bind(&*self.endpoint.address).unwrap();
-        let mut ssl_context = SslContext::new(SslMethod::Tlsv1).unwrap();
+        let mut ssl_context = SslContext::builder(SslMethod::tls()).unwrap();
         // Enable TLS
-        match ssl_context.set_certificate_file(&*self.endpoint.cert.clone(), PEM) {
+        match ssl_context.set_certificate_file(&*self.endpoint.cert.clone(), SslFiletype::PEM) {
             Ok(_) => info!(target:"Server", "Certificate set"),
             Err(_) => error!(target:"Server", "Can't set certificate file"),
         };
-        ssl_context.set_verify(SSL_VERIFY_NONE, None);
-        match ssl_context.set_private_key_file(&*self.endpoint.key.clone(), PEM) {
+        ssl_context.set_verify(SslVerifyMode::NONE);
+        match ssl_context.set_private_key_file(&*self.endpoint.key.clone(), SslFiletype::PEM) {
             Ok(_) => info!(target:"Server", "Private key set"),
             Err(_) => error!(target:"Server", "Can't set private key"),
         };
 
+        let ssl = ssl_context.build();
         for stream in listener.incoming() {
             match stream {
                 Ok(stream) => {
-                    let ssl_stream = SslStream::accept(&ssl_context, stream.try_clone().unwrap());
+                    let ssl_stream = Ssl::new(&ssl).unwrap().accept(stream);
                     let ssl_ok = match ssl_stream {
                         Ok(_) => true,
                         Err(_) => false,
                     };
                     if ssl_ok {
                         let ssl_stream = ssl_stream.unwrap();
-                        let mut client = Client::new(ssl_stream.try_clone().unwrap());
+                        let mut client = Client::new(ssl_stream);
                         let content = client.read();
                         info!(target:"endpoint", "Received:{}", &content);
                         let end = content.find(0u8 as char);
