@@ -1,13 +1,18 @@
 [package]
 name = "rori_irc_entry"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["AmarOk <amarok@enconn.fr>"]
 
 [dependencies]
-irc = { git = "https://github.com/aatxe/irc"}
 rustc-serialize = "*"
+toml = "*"
 regex = "*"
 log = "*"
 env_logger = "*"
-openssl = "0.7"
 rust-crypto = "^0.2"
+openssl = "0.10.4"
+
+[dependencies.irc]
+version = "0.13.4"
+default-features = false
+features = ["json"]

@@ -30,7 +30,7 @@ struct Channels {
  * RoriIrcEntry is an IRC bot for RORI
  */
 struct RoriIrcEntry {
-    server: IrcServer,
+    server: IrcClient,
     channels: Channels,
     secret: String,
     name: String,
@@ -40,7 +40,7 @@ impl RoriIrcEntry {
     fn new<P: AsRef<Path>>(config: P, secret: String, name: String) -> RoriIrcEntry {
         info!(target: "RoriIrcEntry", "init");
         // Connect to IRC from config file
-        let server = IrcServer::new(&config).unwrap();
+        let server = IrcClient::from_config(Config::load(&config).unwrap()).unwrap();
         // Configure from file
         let mut file = File::open(config)
             .ok()
@@ -84,9 +84,9 @@ impl RoriIrcEntry {
             }
         });
         // Get message from IRC
-        for message in self.server.iter() {
-            self.msg_handle(&message.unwrap(), client);
-        }
+        self.server.for_each_incoming(|message| {
+            self.msg_handle(&message, client);
+        }).unwrap();
     }
 
     /**
@@ -123,7 +123,7 @@ pub struct Details {
 
 fn main() {
     // Init logging
-    env_logger::init().unwrap();
+    env_logger::init();
 
     // will contains messages from RORI
     let incoming = Arc::new(Mutex::new(Vec::new()));
